@@ -12,6 +12,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = 8000;
 
+//routes
 app.use("/api", router);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
