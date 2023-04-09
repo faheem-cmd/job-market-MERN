@@ -35,3 +35,83 @@ export const signup = async (req, res) => {
     await res.status(500).json({ message: error });
   }
 };
+
+export const getUsers = async (req, res) => {
+  try {
+    const user = await User.find({});
+    const friends = await User.find({});
+
+    if (user) {
+      let userData = await user?.map((item) => {
+        return {
+          user: item?._id,
+          name: item?.name,
+          email: item?.email,
+          image: item?.image,
+          phone: item?.phone,
+          isMyFriend:
+            friends?.filter((value) => value?.user == item?._id)?.length > 0
+              ? true
+              : false,
+        };
+      });
+      await res.status(201).json({
+        status: 200,
+        success: true,
+        data: userData,
+      });
+    } else {
+      res.status(201).json({
+        success: false,
+        message: "something wrong",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    await res.status(500).json({ message: error });
+  }
+};
+
+export const login = async (req, res) => {
+  const { email, password } = req.body;
+  const filter = { email: email };
+  const result = await User.find(filter);
+  if (result.length == 0) {
+    return res
+      .status(404)
+      .json({ status: "error", message: "Incorrect email" });
+  } else {
+    const user = result[0];
+    const user_data = {
+      user_id: result[0]._id,
+    };
+    let check = await checkPassword(password, user.password);
+    if (check) {
+      let accessToken = Jwt.sign({ user_data }, "access-key-secrete", {
+        expiresIn: "1d",
+      });
+      let refreshToken = Jwt.sign({ user_data }, "access-key-secrete", {
+        expiresIn: "7d",
+      });
+      // req.session.user = device;
+      // let first_time = await Profession.findOne({ email: req.body.email });
+      const update = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      };
+      await User.findOneAndUpdate(filter, update, { new: true });
+      const tokens = {
+        accessToken,
+        refreshToken,
+      };
+      return res.status(200).json({
+        status: "success",
+        data: tokens,
+        message: "Logged in successfully",
+        // first_time: first_time == null ? true : false,
+      });
+    } else {
+      return res.status(404).json({ message: "Invalid credentails" });
+    }
+  }
+};
