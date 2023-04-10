@@ -1,4 +1,5 @@
 import User from "../model/user.model.js";
+import Friends from "../model/friends.model.js";
 import Jwt from "jsonwebtoken";
 import { encryptPassword, checkPassword } from "../services/MiscServices.js";
 
@@ -37,10 +38,10 @@ export const signup = async (req, res) => {
 };
 
 export const getUsers = async (req, res) => {
+  let user_id = req.user.user_data.user_id;
   try {
     const user = await User.find({});
-    const friends = await User.find({});
-
+    const friends = await Friends.find({ myId: user_id });
     if (user) {
       let userData = await user?.map((item) => {
         return {
@@ -50,12 +51,12 @@ export const getUsers = async (req, res) => {
           image: item?.image,
           phone: item?.phone,
           isMyFriend:
-            friends?.filter((value) => value?.user == item?._id)?.length > 0
+            friends?.filter((value) => value?.friendId == item?._id)?.length > 0
               ? true
               : false,
         };
       });
-      await res.status(201).json({
+      await res.status(200).json({
         status: 200,
         success: true,
         data: userData,
@@ -113,5 +114,41 @@ export const login = async (req, res) => {
     } else {
       return res.status(404).json({ message: "Invalid credentails" });
     }
+  }
+};
+
+export const refreshToken = async (req, res) => {
+  const refresh = req.body.refreshToken;
+  try {
+    const decoded = Jwt.verify(refresh, "access-key-secrete");
+    const user = await User.findOne({
+      _id: decoded.user_data?.user_id,
+      refresh_token: refresh,
+    });
+    if (!user) {
+      throw new Error();
+    }
+
+    const user_data = {
+      user_id: user._id,
+    };
+
+    // Generate a new access token
+    const accessToken = Jwt.sign({ user_data }, "access-key-secrete", {
+      expiresIn: "1d",
+    });
+    const refreshToken = Jwt.sign({ user_data }, "access-key-secrete", {
+      expiresIn: "7d",
+    });
+    const update = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
+    const filter = { _id: user._id };
+    await User.findOneAndUpdate(filter, update, { new: true });
+    res.json({ data: update });
+    // Return the new access token
+  } catch (err) {
+    res.status(401).json({ message: "Invalid refresh token" });
   }
 };

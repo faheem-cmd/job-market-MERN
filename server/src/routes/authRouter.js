@@ -4,7 +4,14 @@ import path from "path";
 import session from "express-session";
 import bodyParser from "body-parser";
 
-import { signup, getUsers, login } from "../controllers/authController.js";
+import {
+  signup,
+  getUsers,
+  login,
+  refreshToken,
+} from "../controllers/authController.js";
+import { accessToken } from "../middlewares/authMiddleware.js";
+import { addFriends } from "../controllers/friendsController.js";
 
 var authRouter = express();
 authRouter.use(bodyParser.json());
@@ -35,7 +42,9 @@ const upload = multer({ storage: storage });
 
 authRouter.post("/signup", upload.single("image"), signup);
 authRouter.post("/login", login);
+authRouter.post("/refresh", refreshToken);
 
-authRouter.get("/users", getUsers);
+authRouter.get("/users", accessToken, getUsers);
+authRouter.post("/friends", accessToken, addFriends);
 
 export default authRouter;
