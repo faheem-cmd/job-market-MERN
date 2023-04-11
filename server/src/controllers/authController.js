@@ -9,7 +9,7 @@ export const signup = async (req, res) => {
     if (user) {
       return res.status(404).json({ message: "User already registered" });
     } else {
-      const { name, phone, password, email } = req.body;
+      const { name, phone, password, email, employer } = req.body;
       const imagePath = req.file.path;
       const imageRelativePath = "/" + imagePath.replace(/\\/g, "/");
       const imageUrl =
@@ -21,6 +21,7 @@ export const signup = async (req, res) => {
         email,
         phone,
         image,
+        employer,
         password: encryptedPassword,
       });
       const saveUser = await user.save();
@@ -107,7 +108,7 @@ export const login = async (req, res) => {
       };
       return res.status(200).json({
         status: "success",
-        data: tokens,
+        data: { employer: user?.employer, tokens: tokens },
         message: "Logged in successfully",
         // first_time: first_time == null ? true : false,
       });
